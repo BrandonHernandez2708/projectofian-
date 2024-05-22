@@ -1,34 +1,91 @@
-import tkinter as tk
 import serial
+import time
+import tkinter as tk
+from threading import Thread
+import mysql.connector
+from datetime import datetime
 
-# Configura la conexión serial
-# Asegúrate de especificar el puerto correcto y la velocidad de baudios correcta
-ser = serial.Serial('COM4', 9600)  # Cambia 'COM3' por el puerto correcto
+class TrafficLightGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Semáforo")
 
-def encender():
-    ser.write(b'1')  # Envía '1' por el puerto serial para encender el circuito
+        # Canvas para dibujar los círculos
+        self.canvas = tk.Canvas(root, width=200, height=400)
+        self.canvas.pack()
 
-def apagar():
-    ser.write(b'0')  # Envía '0' por el puerto serial para apagar el circuito
+        # Dibujar los círculos para los LEDs
+        self.led_rojo = self.canvas.create_oval(50, 50, 150, 150, fill='grey')
+        self.led_amarillo = self.canvas.create_oval(50, 150, 150, 250, fill='grey')
+        self.led_verde = self.canvas.create_oval(50, 250, 150, 350, fill='grey')
 
-# Crea la ventana principal
-root = tk.Tk()
-root.title("Control de Circuito")
+        # Configurar la conexión serial
+        self.arduino_port = "COM4"  # Reemplaza con el puerto adecuado
+        self.baud_rate = 9600
+        self.ser = serial.Serial(self.arduino_port, self.baud_rate, timeout=1)
+        time.sleep(2)  # Espera para asegurar que la conexión se haya establecido
 
-# Crea los botones para encender y apagar el circuito
-btn_encender = tk.Button(root, text="Encender", command=encender)
-btn_encender.pack()
+        # Crear un hilo para leer datos del puerto serial
+        self.read_thread = Thread(target=self.read_serial)
+        self.read_thread.daemon = True
+        self.read_thread.start()
 
-btn_apagar = tk.Button(root, text="Apagar", command=apagar)
-btn_apagar.pack()
+        self.update_lights()
 
-# Función para cerrar el puerto serial antes de cerrar la aplicación
-def cerrar_serial():
-    ser.close()
-    root.destroy()
+        # Capturar evento de cierre de la ventana
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-# Asigna la función de cerrar_serial() para ejecutarse cuando se cierre la ventana
-root.protocol("WM_DELETE_WINDOW", cerrar_serial)
+        # Configurar la conexión a la base de datos
+        self.db_conn = mysql.connector.connect(user='root', password="Angry2708",
+                                               host="localhost",
+                                               database="ledcontrol",
+                                               port="3306")
+        self.cursor = self.db_conn.cursor()
 
-# Inicia el bucle principal de la interfaz gráfica
-root.mainloop()
+    def read_serial(self):
+        while True:
+            if self.ser.in_waiting > 0:
+                line = self.ser.readline().decode('utf-8').rstrip()
+                print(line)
+                self.process_line(line)
+
+    def process_line(self, line):
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if "LED Rojo: ON" in line:
+            self.canvas.itemconfig(self.led_rojo, fill='red')
+            self.log_event("Rojo", "ON", current_time)
+        elif "LED Rojo: OFF" in line:
+            self.canvas.itemconfig(self.led_rojo, fill='grey')
+        elif "LED Amarillo: ON" in line:
+            self.canvas.itemconfig(self.led_amarillo, fill='yellow')
+            self.log_event("Amarillo", "ON", current_time)
+        elif "LED Amarillo: OFF" in line:
+            self.canvas.itemconfig(self.led_amarillo, fill='grey')
+        elif "LED Verde: ON" in line:
+            self.canvas.itemconfig(self.led_verde, fill='green')
+            self.log_event("Verde", "ON", current_time)
+        elif "LED Verde: OFF" in line:
+            self.canvas.itemconfig(self.led_verde, fill='grey')
+
+    def log_event(self, led_color, state, timestamp):
+        query = "INSERT INTO led_events (led_color, state, timestamp) VALUES (%s, %s, %s)"
+        self.cursor.execute(query, (led_color, state, timestamp))
+        self.db_conn.commit()
+
+    def update_lights(self):
+        self.root.after(100, self.update_lights)  # Actualiza cada 100 ms
+
+    def on_closing(self):
+        print("*****Gracias por su visita*****")
+        self.ser.close()
+        self.cursor.close()
+        self.db_conn.close()
+        self.root.destroy()
+
+def main():
+    root = tk.Tk()
+    app = TrafficLightGUI(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
