@@ -10,11 +10,11 @@ class TrafficLightGUI:
         self.root = root
         self.root.title("Semáforo")
 
-        # Canvas para dibujar los círculos
+       
         self.canvas = tk.Canvas(root, width=200, height=400)
         self.canvas.pack()
 
-        # Dibujar los círculos para los LEDs
+        
         self.led_rojo = self.canvas.create_oval(50, 50, 150, 150, fill='grey')
         self.led_amarillo = self.canvas.create_oval(50, 150, 150, 250, fill='grey')
         self.led_verde = self.canvas.create_oval(50, 250, 150, 350, fill='grey')
@@ -25,7 +25,7 @@ class TrafficLightGUI:
         self.ser = serial.Serial(self.arduino_port, self.baud_rate, timeout=1)
         time.sleep(2)  # Espera para asegurar que la conexión se haya establecido
 
-        # Crear un hilo para leer datos del puerto serial
+       
         self.read_thread = Thread(target=self.read_serial)
         self.read_thread.daemon = True
         self.read_thread.start()
@@ -51,20 +51,20 @@ class TrafficLightGUI:
 
     def process_line(self, line):
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        if "LED Rojo: ON" in line:
+        if "LED Rojo: encendido" in line:
             self.canvas.itemconfig(self.led_rojo, fill='red')
             self.log_event("Rojo", "ON", current_time)
-        elif "LED Rojo: OFF" in line:
+        elif "LED Rojo: Apagado" in line:
             self.canvas.itemconfig(self.led_rojo, fill='grey')
-        elif "LED Amarillo: ON" in line:
+        elif "LED Amarillo: Encendido" in line:
             self.canvas.itemconfig(self.led_amarillo, fill='yellow')
             self.log_event("Amarillo", "ON", current_time)
-        elif "LED Amarillo: OFF" in line:
+        elif "LED Amarillo: Apagado" in line:
             self.canvas.itemconfig(self.led_amarillo, fill='grey')
-        elif "LED Verde: ON" in line:
+        elif "LED Verde: Encendido" in line:
             self.canvas.itemconfig(self.led_verde, fill='green')
             self.log_event("Verde", "ON", current_time)
-        elif "LED Verde: OFF" in line:
+        elif "LED Verde: Apagado" in line:
             self.canvas.itemconfig(self.led_verde, fill='grey')
 
     def log_event(self, led_color, state, timestamp):
