@@ -1,70 +1,102 @@
+//Proyecto Grupo #7
+// Semáforo con botón de encendido/apagado
 // Declarando parámetros
 int led_verde = 11;
 int led_amarillo = 12;
 int led_rojo = 13;
+int buttonPin = 10;
+int buttonState = 0;
+bool semaforoEncendido = false;
+bool primerPresion = true; // Para controlar la primera presión del botón
 
 void setup() {
-  Serial.begin(9600); // Inicia la comunicación serial a 9600 baudios
-  // Configuración de pines
+  // Inicializar comunicación serial
+  Serial.begin(9600);
+
+  // Se indica que cada pin es de salida OUTPUT.
   pinMode(led_verde, OUTPUT);
   pinMode(led_amarillo, OUTPUT);
   pinMode(led_rojo, OUTPUT);
-
-  // Configurar pines del display de 7 segmentos como salidas
-  for (int i = 2; i <= 8; i++) {
-    pinMode(i, OUTPUT);
-  }
-
-  // Apaga todos los LEDs y segmentos del display
+  pinMode(buttonPin, INPUT);
+  // Se apagan todos los LEDs
   digitalWrite(led_verde, LOW);
   digitalWrite(led_amarillo, LOW);
   digitalWrite(led_rojo, LOW);
-  funcNum(-1); // Apaga todos los segmentos del display
+  // Pines 2-8 encienden LEDs del visualizador de segmentos
+  pinMode(2, OUTPUT); // a
+  pinMode(3, OUTPUT); // b
+  pinMode(4, OUTPUT); // c
+  pinMode(5, OUTPUT); // d
+  pinMode(6, OUTPUT); // e
+  pinMode(7, OUTPUT); // f
+  pinMode(8, OUTPUT); // g
 }
 
 void loop() {
-  // Encender LED verde y contar 9 segundos
-  digitalWrite(led_verde, HIGH);
-  for (int i = 9; i >= 0; i--) {
-    funcNum(i);
-    delay(1000);
+  buttonState = digitalRead(buttonPin);
+  
+  if (buttonState == HIGH) {
+    if (primerPresion) { // Si es la primera presión, enciende el semáforo
+      semaforoEncendido = true;
+      primerPresion = false; // Cambia el estado para la próxima presión
+    } else { // Si no es la primera presión, apaga el semáforo
+      semaforoEncendido = false;
+      primerPresion = true; // Cambia el estado para la próxima presión
+    }
+    delay(200); // Retardo para evitar el rebote del botón
   }
-  digitalWrite(led_verde, LOW); // Apagar LED verde
 
-  // Parpadear LED amarillo 3 veces
- // Parpadear LED amarillo 3 veces
- digitalWrite(led_amarillo, HIGH);
-  for (int i =3 ; i >= 0; i--) {
-    funcNum(i);
-    delay(1000);
+  if (semaforoEncendido) {
+    // Encender LED verde y contar 9 segundos
+    digitalWrite(led_verde, HIGH);
+    Serial.println("LED Verde: ON");
+    for (int i = 9; i >= 0; i--) {
+      funcNum(i);
+      delay(1000);
+    }
+    digitalWrite(led_verde, LOW); // Apagar LED verde
+    Serial.println("LED Verde: OFF");
+
+    // Parpadear LED amarillo 3 veces
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(led_amarillo, HIGH);
+      Serial.println("LED Amarillo: ON");
+      delay(500);
+      digitalWrite(led_amarillo, LOW);
+      Serial.println("LED Amarillo: OFF");
+      delay(500);
+    }
+
+    // Encender LED rojo y contar 9 segundos
+    digitalWrite(led_rojo, HIGH);
+    Serial.println("LED Rojo: ON");
+    for (int i = 9; i >= 0; i--) {
+      funcNum(i);
+      delay(1000);
+    }
+    digitalWrite(led_rojo, LOW); // Apagar LED rojo
+    Serial.println("LED Rojo: OFF");
+  } else {
+    // Apagar todos los LEDs
+    digitalWrite(led_verde, LOW);
+    digitalWrite(led_amarillo, LOW);
+    digitalWrite(led_rojo, LOW);
+    // Apagar display de 7 segmentos
+    funcNum(-1); // Función para apagar el display
+    Serial.println("Semaforo: OFF");
   }
-  digitalWrite(led_amarillo, LOW); // Apagar LED rojo
-  // Apagar LED amarillo y encender LED rojo
-  digitalWrite(led_amarillo, LOW);
-  digitalWrite(led_rojo, HIGH);
-  // Contar 9 segundos con el LED rojo encendido
-  for (int i = 9; i >= 0; i--) {
-    funcNum(i);
-    delay(1000);
-  }
-  digitalWrite(led_rojo, LOW); // Apagar LED rojo
-
-  // Envía el estado actual del semáforo por comunicación serial
-  Serial.println("Semaforo: Rojo");
-
-  // Retraso de 1 segundo antes de reiniciar el ciclo
-  delay(1000);
 }
 
 // Función para encender los segmentos del visualizador de 7 segmentos
 void funcNum(int x) {
-  // Si x es -1, apaga todos los segmentos
+  // Si x es -1, apagar todos los segmentos
   if (x == -1) {
     for (int i = 2; i <= 8; i++) {
       digitalWrite(i, LOW);
     }
     return;
   }
+
   switch (x) {
     case 0: // cuando el valor es 0 mostrar "0" en el display
       digitalWrite(2, HIGH); // a
@@ -156,5 +188,5 @@ void funcNum(int x) {
       digitalWrite(7, HIGH); // f
       digitalWrite(8, HIGH); // g
       break;
-  } 
+  }
 }
