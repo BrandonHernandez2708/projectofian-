@@ -36,7 +36,7 @@ class TrafficLightGUI:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Configurar la conexión a la base de datos
-        self.db_conn = mysql.connector.connect(user='root', password="Angry2708",
+        self.db_conn = mysql.connector.connect(user='root', password="",
                                                host="localhost",
                                                database="ledcontrol",
                                                port="3306")
